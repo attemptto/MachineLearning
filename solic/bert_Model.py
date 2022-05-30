@@ -6,6 +6,7 @@ from transformers import Trainer,TrainingArguments, BertTokenizer, BertModel, Be
 from transformers.modeling_outputs import SequenceClassifierOutput
 import torch
 from torch import nn
+import numpy as np
 
 # 文本的分类
 class BertForSeq(BertPreTrainedModel):
@@ -66,6 +67,5 @@ if __name__ == '__main__':
     ## 得到输出
     outputs = model(input_ids,attention_mask=attention_mask,token_type_ids=token_type_ids,labels=labels)
     ## 取输出里面的loss和logits
-
-
+    pre = torch.argmax(outputs[1], dim=1)
     pass
