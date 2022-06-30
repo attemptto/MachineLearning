@@ -5,7 +5,7 @@ import time
 import os
 import torch
 import logging
-from torch.optim import Adam
+from torch.optim import AdamW
 from transformers import Trainer, TrainingArguments, BertTokenizer, BertModel, BertPreTrainedModel, BertConfig, \
     get_linear_schedule_with_warmup
 from torch.utils.data import Dataset, DataLoader
@@ -31,13 +31,31 @@ def train(batch_size, epochs):
     dev_dataloader = DataLoader(dev_dataset, batch_size=batch_size)
 
     #优化器
-    optimizer = Adam(model.parameters(),lr=2e-5)
+    optimizer = AdamW(model.parameters(),lr=2e-5)
     total_step = len(train_dataloader) * epochs
     scheduler = get_linear_schedule_with_warmup(optimizer=optimizer,num_warmup_steps=0,num_training_steps=total_step)
 
     total_time = time.time()
 
     log = log_creater(output_dir='./cache/logs/')
+    log.info(" Train batch_size:{}".format(batch_size))
+    log.info(" Total step:{}".format(total_step))
+    log.info(" Training start!")
+
+    for epoch in range(epochs):
+        total_train_loss = 0
+        t0 = time.time()
+        model.to(device)
+        model.train()
+        for step, batch in enumerate(train_dataloader):
+            input_ids = batch['input_ids'].to(device)
+            attention_mask = batch['attention_mask'].to(device)
+            token_type_ids = batch['token_type_ids'].to(device)
+            labels = batch['labels'].to(device)
+            model.zero_grad()
+
+            outputs = model(input_ids,attention_mask = attention_mask, token_type_ids=token_type_ids,labels= labels)
+
 
 
 

@@ -10,6 +10,7 @@ import numpy as np
 
 # 文本的分类
 class BertForSeq(BertPreTrainedModel):
+
     def __init__(self, config):
         super(BertForSeq,self).__init__(config)
         self.config = BertConfig(config)
@@ -20,9 +21,9 @@ class BertForSeq(BertPreTrainedModel):
 
     def forward(self, input_ids, attention_mask=None, token_type_ids=None, labels = None, return_dict = None):
 
-        # return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = return_dict if return_dict is not None else None
 
-        outputs = self.bert(input_ids , attention_mask,token_type_ids,  return_dict)
+        outputs = self.bert(input_ids, attention_mask,token_type_ids, return_dict)
         pool_output = outputs[1]
         pool_output = self.dropout(pool_output)
         # logits -—— softmax层的输入（0.4， 0.6）--- 1
@@ -67,5 +68,7 @@ if __name__ == '__main__':
     ## 得到输出
     outputs = model(input_ids,attention_mask=attention_mask,token_type_ids=token_type_ids,labels=labels)
     ## 取输出里面的loss和logits
-    pre = torch.argmax(outputs[1], dim=1)
+    logits = outputs.logits
+    loss = outputs.loss
+    pred = torch.argmax(logits,dim=1)
     pass
