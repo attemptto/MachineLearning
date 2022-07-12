@@ -2,9 +2,11 @@ import torch.nn as nn
 from torch.utils.data import Dataset,DataLoader
 import pandas as pd
 import torch
+from sklearn.decomposition import PCA
 import numpy as np
 from transformers import BertTokenizer,BertModel,AdamW
-
+import os
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 def load_data(data_path):
     all_data = pd.read_csv(data_path)
@@ -85,8 +87,7 @@ if __name__=="__main__":
     dataset = Mydataset(input_ids, attention_mask, token_type_ids, label)
     data_loader = DataLoader(dataset,batch_size=16,shuffle=False,drop_last=True)
 
-
-
+    # 加载预训练模型
     pre_trained = BertModel.from_pretrained('bert-base-chinese')
     pre_trained = pre_trained.to(device)
     # out = pre_trained(input_ids=input_ids,

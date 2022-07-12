@@ -73,7 +73,7 @@ class OhModel(nn.Module):
 
     def forward(self, text_onehot, labels=None):
         output, h_n = self.rnn(text_onehot,None)
-
+        pass
 
 def test_file():
     global model, word_2_index, index_2_onehot, device, max_len
