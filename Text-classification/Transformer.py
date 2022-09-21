@@ -157,6 +157,102 @@ class TransformerEncoder(nn.Module):
 
         return seq_inputs
 
+
+class DecoderLayer(nn.Module):
+    def __init__(self, input_dim, dk_dim, n_heads , drop_out=0.1):
+        # mask 的多头注意力
+        """
+
+        :param input_dim:
+        :param dk_dim:
+        :param n_heads:
+        :param drop_out:
+        """
+        self.masked_attention = MultiHeadAttentionLayer(input_dim=input_dim, dk_dim = dk_dim, n_heads=n_heads)
+
+        # mask的LayerNorm
+        self.m_a_LN = nn.LayerNorm(input_dim)
+
+        # 多头注意力
+        self.attention = MultiHeadAttentionLayer(input_dim=input_dim, dk_dim=dk_dim, n_heads=n_heads)
+
+        # 多头注意力之后的layernorm
+        self.a_Ln = nn.LayerNorm(input_dim)
+
+        # 前馈神经网络
+        self.ff = FeedForward(input_dim=input_dim,ff_dim=input_dim//2)
+
+        # 前馈之后的LayerNorm
+        self.ff_LN = nn.LayerNorm(input_dim)
+
+        # Dropout
+        self.drop_out = nn.Dropout(drop_out)
+
+    def forward(self, seq_inputs, query, mask):
+
+        # mask attention
+        outs_ = self.masked_attention(seq_inputs, mask)
+
+        # 残差连接 out [batch_size, seq_len, input_dim]
+        out = self.m_a_LN(self.drop_out(outs_) + seq_inputs)
+
+        # 多头注意力
+        outs_ = self.attention(query,out)
+
+        # 多头注意力之后的layernorm
+        out = self.a_Ln(self.drop_out(outs_) + out)
+
+        # 前馈网络
+        outs_ = self.ff(out)
+
+        # 前馈的LayerNorm
+        out = self.ff_LN(self.drop_out(outs_) + out)
+
+        return out
+
+class TransformerDecoder(nn.Module):
+    def __init__(self, input_dim, dk_dim, n_heads, n_layers, n_classes, drop_out=0.1):
+        self.position_embedding = PositionalEncoding(input_dim=input_dim)
+        # 多少个decoder 的 Block
+        self.decoder_layers = nn.ModuleList([DecoderLayer(input_dim=input_dim, dk_dim=dk_dim, n_heads=n_heads, drop_out=drop_out) for _ in range(n_layers)])
+
+        # 最后的线性层和softmax
+        self.linear = nn.Linear(input_dim, n_classes)
+        self.softmax = nn.Softmax()
+
+
+    def forward(self, seq_inputs,query):
+        seq_inputs = self.position_embedding(seq_inputs)
+
+        mask = subsequent_mask(seq_inputs.shape[1])
+
+        for layer in self.decoder_layers:
+            seq_inputs = layer(seq_inputs, query, mask)
+
+        seq_outputs = self.softmax(self.linear(seq_inputs))
+        return seq_outputs
+
+
+
+def subsequent_mask(size):
+    subsequent_mask = torch.triu(torch.ones(size=(1, size, size))) == 0
+    return subsequent_mask
+
+
+
+class Transformer(nn.Module):
+    def __init__(self,e_dim, h_dim, n_heads, n_layers, n_classes,drop_rate=0.1):
+        super().__init__()
+        self.encoder = TransformerEncoder(e_dim, h_dim, n_heads, n_layers, drop_rate)
+        self.decoder = TransformerDecoder(e_dim, h_dim, n_heads, n_layers, n_classes,drop_rate)
+
+    def forward(self,input, output):
+        query = self.encoder(input)
+        pred_seqs = self.decoder(output, query)
+        return pred_seqs
+
+
+
 if __name__=="__main__":
     input = torch.randn(5,3,12)
     tem = TransformerEncoder(input_dim=12, dk_dim=8, n_heads=3, n_layers=6)
